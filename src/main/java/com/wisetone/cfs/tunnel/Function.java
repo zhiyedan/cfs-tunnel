@@ -37,7 +37,31 @@ public class Function {
     * 添加 Ipsec-GRE tunnel port
      *
     * */
-    public static void addTunnelPort(String nodeId,String remoteIP){
+    public static void addgreTunnelPort(String nodeId,String remoteIP){
+        String nodeIdInURL = nodeId.replaceAll("/","%2F");
+        String url = odlIP+"restconf/config/network-topology:network-topology/topology/ovsdb:1/node/"+nodeIdInURL+"/termination-point/gre/";
+        JSONObject content = new JSONObject();
+        JSONArray terminalPoints = new JSONArray();
+        JSONObject terminalPoint = new JSONObject();
+        terminalPoint.put("ovsdb:name","gre");
+        terminalPoint.put("ovsdb:interface-type","ovsdb:interface-type-gre");
+        terminalPoint.put("tp-id","gre");
+        JSONArray options = new JSONArray();
+        JSONObject option0 = new JSONObject();
+        option0.put("ovsdb:option","remote_ip");
+        option0.put("ovsdb:value",remoteIP);
+        JSONObject option1 = new JSONObject();
+        option1.put("ovsdb:option","psk");
+        option1.put("ovsdb:value","test123");
+        options.put(0,option0);
+        options.put(1,option1);
+        terminalPoint.put("ovsdb:options",options);
+        terminalPoints.put(0,terminalPoint);
+        content.put("network-topology:termination-point",terminalPoints);
+        System.out.println(content.toString());
+        ODLRestUtil.putUtil(url,content);
+    }
+    public static void addipsecTunnelPort(String nodeId,String remoteIP){
         String nodeIdInURL = nodeId.replaceAll("/","%2F");
         String url = odlIP+"restconf/config/network-topology:network-topology/topology/ovsdb:1/node/"+nodeIdInURL+"/termination-point/ipsec-gre/";
         JSONObject content = new JSONObject();
@@ -51,8 +75,8 @@ public class Function {
         option0.put("ovsdb:option","remote_ip");
         option0.put("ovsdb:value",remoteIP);
         JSONObject option1 = new JSONObject();
-        option1.put("ovsdb:option","psk");
-        option1.put("ovsdb:value","test123");
+        option1.put("ovsdb:option","key");
+        option1.put("ovsdb:value","123");
         options.put(0,option0);
         options.put(1,option1);
         terminalPoint.put("ovsdb:options",options);

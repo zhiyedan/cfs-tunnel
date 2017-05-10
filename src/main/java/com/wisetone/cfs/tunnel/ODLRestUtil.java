@@ -7,6 +7,7 @@ import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.StringEntity;
@@ -47,7 +48,7 @@ public class ODLRestUtil {
         return content;
     }
 
-    public static String putUtil(String url,JSONObject content){
+    public static String putUtil1(String url,JSONObject content){
         String result=null;
         HttpPut httpPut = new HttpPut(url);
         if(content !=null){
@@ -63,6 +64,41 @@ public class ODLRestUtil {
                 e.printStackTrace();
                 System.out.println("post 请求异常");
             }
+        }
+        return content==null?"input content is null":result;
+    }
+
+    public static String putUtil(String url,String body){
+        String result=null;
+        HttpPut httpPut = new HttpPut(url);
+        if(body !=null){
+            StringEntity entity = new StringEntity(body,"utf-8");
+            entity.setContentType("application/json");
+            httpPut.setEntity(entity);
+            try {
+                HttpResponse response = httpClient.execute(httpPut);
+                if(response.getStatusLine().getStatusCode()!=200){
+                    result = EntityUtils.toString(response.getEntity());
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                System.out.println("post 请求异常");
+            }
+        }
+        return body==null?"input content is null":result;
+    }
+
+    public static String deleteUtil(String url){
+        String result = null;
+        HttpDelete httpDelete = new HttpDelete(url);
+        try {
+            HttpResponse response = httpClient.execute(httpDelete);
+            if(response.getStatusLine().getStatusCode()!=200){
+                result = EntityUtils.toString(response.getEntity());
+                System.out.println("status code is "+response.getStatusLine().getStatusCode());
+            }
+        } catch (IOException e) {
+            System.out.println("httpDelete failed");
         }
         return result;
     }

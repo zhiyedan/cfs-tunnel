@@ -8,12 +8,13 @@ import org.json.JSONObject;
  */
 public class Function {
 
-    public static String odlIP = "http://192.168.0.110:8181/";
+    public static String ODLIP = "http://192.168.0.110:8181/";
+    public static String PREURL = "restconf/config/network-topology:network-topology/topology/ovsdb:1/node/";
     /*
     * 获取整个网络的拓扑结构--截止到node层
     * */
     public static void getTopo(){
-        String url = odlIP+"restconf/operational/network-topology:network-topology/";
+        String url = ODLIP+"restconf/operational/network-topology:network-topology/";
         String result = ODLRestUtil.getUtil(url);
         JSONObject jsonObject = new JSONObject(result);
         JSONObject netTopo = (JSONObject) jsonObject.get("network-topology");
@@ -34,55 +35,74 @@ public class Function {
         }
     }
     /*
+    * active connect to OVS host
+    * @param name:ovs name
+    * @param remoteIp : the ovs host ip
+    * */
+    public static void setOVSNodeId(String name,String remoteIp){
+        //TODO name查重
+        String nameINURL = name.replaceAll("/","%2F");
+        String url = ODLIP+PREURL+nameINURL;
+        String body = "{\"network-topology:node\":[{\"node-id\":\""+name+"\",\"connection-info\":{\"ovsdb:remote-port\":\"6640\",\"ovsdb:remote-ip\":\""+remoteIp+"\"}}]}";
+        System.out.println(body);
+        ODLRestUtil.putUtil(url,body);
+    }
+
+    /*
+    * add a bridge on OVS
+    * @param name : bridge name
+    * @param nodeID
+    * */
+    public static void addBridge(String ovsNodeId,String bridgeName){
+        String nodeId = ovsNodeId+"/bridge/"+bridgeName;
+        String nodeIdURL = nodeId.replaceAll("/","%2F");
+        String url = ODLIP+PREURL+nodeIdURL;
+        String JsonBody = "{\"network-topology:node\":[{\"node-id\":\""+nodeId+"\",\"ovsdb:bridge-name\":\""+bridgeName
+                +"\",\"ovsdb:protocol-entry\":[{\"protocol\": \"ovsdb:ovsdb-bridge-protocol-openflow-13\"}]," +
+                "\"ovsdb:managed-by\": \"/network-topology:network-topology/network-topology:topology[network-topology:topology-id='ovsdb:1']" +
+                "/network-topology:node[network-topology:node-id='"+ovsNodeId+"']\"}]}";
+        ODLRestUtil.putUtil(url,JsonBody);
+    }
+
+    /*
+    * delete bridge
+    * @param bridgeId: the bridge node-id
+    * */
+    public static void deleteBridge(String bridgeId){
+        String bridgeIdURL = bridgeId.replaceAll("/","%2F");
+        String url = ODLIP+PREURL+bridgeIdURL;
+        ODLRestUtil.deleteUtil(url);
+    }
+
+    /*
+    * 添加 GRE tunnel port
+     *
+    * */
+    public static void addGRETunnelPort(String bridgeNodeId,String remoteIP,String portName){
+        String nodeIdInURL = bridgeNodeId.replaceAll("/","%2F");
+        String url = ODLIP+PREURL+nodeIdInURL+"/termination-point/"+portName;
+        String jsonBody = "{\"network-topology:termination-point\":[{\"ovsdb:name\":\""+portName+"\",\"ovsdb:interface-type\":\"ovsdb:interface-type-gre\"," +
+                "\"tp-id\":\""+portName+"\",\"ovsdb:options\":[{\"ovsdb:option\":\"remote_ip\",\"ovsdb:value\":\""+remoteIP+"\"}]}]}";
+        ODLRestUtil.putUtil(url,jsonBody);
+    }
+    /*
     * 添加 Ipsec-GRE tunnel port
      *
     * */
-    public static void addgreTunnelPort(String nodeId,String remoteIP){
-        String nodeIdInURL = nodeId.replaceAll("/","%2F");
-        String url = odlIP+"restconf/config/network-topology:network-topology/topology/ovsdb:1/node/"+nodeIdInURL+"/termination-point/gre/";
-        JSONObject content = new JSONObject();
-        JSONArray terminalPoints = new JSONArray();
-        JSONObject terminalPoint = new JSONObject();
-        terminalPoint.put("ovsdb:name","gre");
-        terminalPoint.put("ovsdb:interface-type","ovsdb:interface-type-gre");
-        terminalPoint.put("tp-id","gre");
-        JSONArray options = new JSONArray();
-        JSONObject option0 = new JSONObject();
-        option0.put("ovsdb:option","remote_ip");
-        option0.put("ovsdb:value",remoteIP);
-        JSONObject option1 = new JSONObject();
-        option1.put("ovsdb:option","psk");
-        option1.put("ovsdb:value","test123");
-        options.put(0,option0);
-        options.put(1,option1);
-        terminalPoint.put("ovsdb:options",options);
-        terminalPoints.put(0,terminalPoint);
-        content.put("network-topology:termination-point",terminalPoints);
-        System.out.println(content.toString());
-        ODLRestUtil.putUtil(url,content);
+    public static void addIpsecTunnelPort(String bridgeNodeId,String remoteIP,String portName){
+        String nodeIdInURL = bridgeNodeId.replaceAll("/","%2F");
+        String url = ODLIP+PREURL+nodeIdInURL+"/termination-point/"+portName;
+        String jsonBody = "{\"network-topology:termination-point\":[{\"ovsdb:name\":\""+portName+"\",\"ovsdb:interface-type\":\"ovsdb:interface-type-ipsec-gre\"," +
+                "\"tp-id\":\""+portName+"\",\"ovsdb:options\":[{\"ovsdb:option\":\"remote_ip\",\"ovsdb:value\":\""+remoteIP+"\"}," +
+                "{\"ovsdb:option\":\"psk\",\"ovsdb:value\":\"test123\"}]}]}";
+        ODLRestUtil.putUtil(url,jsonBody);
     }
-    public static void addipsecTunnelPort(String nodeId,String remoteIP){
-        String nodeIdInURL = nodeId.replaceAll("/","%2F");
-        String url = odlIP+"restconf/config/network-topology:network-topology/topology/ovsdb:1/node/"+nodeIdInURL+"/termination-point/ipsec-gre/";
-        JSONObject content = new JSONObject();
-        JSONArray terminalPoints = new JSONArray();
-        JSONObject terminalPoint = new JSONObject();
-        terminalPoint.put("ovsdb:name","ipsec-gre");
-        terminalPoint.put("ovsdb:interface-type","ovsdb:interface-type-ipsec-gre");
-        terminalPoint.put("tp-id","ipsec-gre");
-        JSONArray options = new JSONArray();
-        JSONObject option0 = new JSONObject();
-        option0.put("ovsdb:option","remote_ip");
-        option0.put("ovsdb:value",remoteIP);
-        JSONObject option1 = new JSONObject();
-        option1.put("ovsdb:option","key");
-        option1.put("ovsdb:value","123");
-        options.put(0,option0);
-        options.put(1,option1);
-        terminalPoint.put("ovsdb:options",options);
-        terminalPoints.put(0,terminalPoint);
-        content.put("network-topology:termination-point",terminalPoints);
-        System.out.println(content.toString());
-        ODLRestUtil.putUtil(url,content);
+    /*
+    * delete tunnel
+    * */
+    public static void deleteTunnel(String bridgeNodeId,String portID){
+        String nodeIDURL = bridgeNodeId.replaceAll("/","%2F");
+        String url = ODLIP+PREURL+nodeIDURL+"/termination-point/"+portID;
+        ODLRestUtil.deleteUtil(url);
     }
 }
